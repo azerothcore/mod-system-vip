@@ -4,6 +4,8 @@
 
 #include "SystemVip.h"
 #include "WorldSessionMgr.h"
+#include "Spell.h"            
+#include "SpellInfo.h"
 
 #define sV sSystemVip
 
@@ -17,7 +19,9 @@ public:
         PLAYERHOOK_ON_GIVE_EXP,
         PLAYERHOOK_ON_BEFORE_LOOT_MONEY,
         PLAYERHOOK_ON_PLAYER_RELEASED_GHOST,
-        PLAYERHOOK_ON_VICTIM_REWARD_AFTER
+        PLAYERHOOK_ON_VICTIM_REWARD_AFTER,
+        PLAYERHOOK_ON_PLAYER_COMPLETE_QUEST,
+        PLAYERHOOK_ON_SPELL_CAST
     }) { }
 
     void OnPlayerLogin(Player* player) override
@@ -34,6 +38,22 @@ public:
         sV->delExpireVip(player);
         if (sV->saveTeleport && sV->isVip(player))
             sV->loadTeleportVip(player);
+
+        uint32 vipItemId = 44824;
+        if (sV->isVip(player) && !player->HasItemCount(vipItemId, 1, true))
+        {
+            ItemPosCountVec dest;
+            if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, vipItemId, 1) == EQUIP_ERR_OK)
+            {
+                player->StoreNewItem(dest, vipItemId, 1, true);
+                ChatHandler(player->GetSession()).PSendSysMessage("La mascota VIP ha sido añadida a tu inventario!");
+            }
+            else
+            {
+                ChatHandler(player->GetSession()).PSendSysMessage("¡Tu inventario está lleno, libera espacio y vuelve a iniciar sesión para recibir tu mascota VIP!");
+            }
+        }
+
     }
 
     void OnPlayerLogout(Player* player) override
@@ -52,6 +72,40 @@ public:
     {
         if (sV->isVip(player) && sV->rateCustom)
             loot->gold *= sV->goldRate;
+    }
+
+    void OnPlayerCompleteQuest(Player* player, Quest const* quest) override
+    {
+        if (!sV->isVip(player) || !sV->rateCustom)
+            return;
+        if (quest->GetRewOrReqMoney() > 0)
+        {
+            uint32 baseGold = quest->GetRewOrReqMoney();
+            if (baseGold > 0 && sV->goldRate > 1)
+            {
+                uint32 bonusGold = baseGold * (sV->goldRate - 1);
+                player->ModifyMoney(bonusGold);
+            }
+        }
+
+        uint32 questHonor = quest->CalculateHonorGain(player->GetLevel());
+        if (questHonor > 0 && sV->honorRate > 1)
+        {
+            uint32 bonusHonor = questHonor * (sV->honorRate - 1);
+            player->ModifyHonorPoints(bonusHonor);
+        }
+    }
+    void OnPlayerSpellCast(Player* player, Spell* spell, bool /*skipCheck*/) override
+    {
+        if (!spell || !sV->isVip(player) || !sV->rateCustom)
+            return;
+
+        if (spell->GetSpellInfo()->Id == 61700 && sV->honorRate > 1)
+        {
+            uint32 baseHonor = 2000;
+            uint32 bonusHonor = baseHonor * (sV->honorRate - 1);
+            player->ModifyHonorPoints(bonusHonor);
+        }
     }
 
     void OnPlayerReleasedGhost(Player* player) override
@@ -74,7 +128,6 @@ public:
         }
     }
 };
-
 class SystemVipVendor : public CreatureScript {
 public:
     SystemVipVendor() : CreatureScript("SystemVipVendor") {}
