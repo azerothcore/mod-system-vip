@@ -170,11 +170,16 @@ public:
         player->CastSpell(player, 73213);
         player->PlayDistanceSound(3980, player);
 
-        float distance = 20;
-        float angle = player->GetOrientation() * M_PI / 180.0f;
+        // spawn beside the player, where the pet will follow
+        float x, y, z;
+        player->GetClosePoint(x, y, z, player->GetCombatReach(), PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
 
-        Creature* pet = player->SummonCreature(100043, player->GetPositionX() + (distance * cos(angle)), player->GetPositionY() + (distance * sin(angle)), player->GetPositionZ(), player->GetOrientation(), TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 60000);
-        pet->GetMotionMaster()->MoveFollow(player, PET_FOLLOW_DIST + 2.0, PET_FOLLOW_ANGLE);
+        Creature* pet = player->SummonCreature(100043, x, y, z, player->GetOrientation(),
+            TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 60000);
+        if (!pet)
+            return false;
+
+        pet->GetMotionMaster()->MoveFollow(player, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
         pet->SetFaction(player->GetFaction());
         pet->SetLevel(player->GetLevel());
         pet->SetCreatorGUID(player->GetGUID());
