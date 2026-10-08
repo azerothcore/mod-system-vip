@@ -37,15 +37,13 @@ public:
             ChatHandler(player->GetSession()).PSendSysMessage("Remaining VIP subscription time: |cff4CFF00{}|r", sV->getFormatedVipTime(player).c_str());
 
         sV->delExpireVip(player);
-        // loaded for non VIP too, buying VIP mid-session must see the rows already in the DB
-        if (sV->saveTeleport)
-            sV->loadTeleportVip(player);
+        // always loaded, buying VIP or turning SaveTeleport on with a config reload must see the rows in the DB
+        sV->loadTeleportVip(player);
     }
 
     void OnPlayerLogout(Player* player) override
     {
-        if (sV->saveTeleport)
-            sV->teleportMap.erase(player->GetSession()->GetAccountId());
+        sV->teleportMap.erase(player->GetSession()->GetAccountId());
     }
 
     void OnPlayerGiveXP(Player* player, uint32& amount, Unit* /*victim*/, uint8 /*xpSource*/) override
@@ -273,10 +271,7 @@ public:
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action)
     {
         if (!CanUsePet(player, creature))
-        {
-            CloseGossipMenuFor(player);
             return true;
-        }
 
         ClearGossipMenuFor(player);
         switch (action)
@@ -428,10 +423,7 @@ public:
     bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code)
     {
         if (!CanUsePet(player, creature))
-        {
-            CloseGossipMenuFor(player);
             return true;
-        }
 
         switch (action)
         {
