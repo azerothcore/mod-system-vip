@@ -3,9 +3,14 @@
  */
 
 #include "SystemVip.h"
+#include "TemporarySummon.h"
 #include "WorldSessionMgr.h"
 
 #define sV sSystemVip
+
+// the pet despawns this long after the last time the player talked to it
+constexpr uint32 VIP_PET_LIFETIME = 60 * IN_MILLISECONDS;
+constexpr uint32 NPC_VIP_PET = 100043;
 
 // Add player scripts
 class SystemVipPlayer : public PlayerScript
@@ -170,12 +175,19 @@ public:
         player->CastSpell(player, 73213);
         player->PlayDistanceSound(3980, player);
 
+        // one pet per player, the item cooldown is shorter than a pet in use lives
+        std::list<Creature*> oldPets;
+        player->GetCreatureListWithEntryInGrid(oldPets, NPC_VIP_PET, 100.0f);
+        for (Creature* oldPet : oldPets)
+            if (oldPet->GetCreatorGUID() == player->GetGUID())
+                oldPet->DespawnOrUnsummon();
+
         // spawn beside the player, where the pet will follow
         float x, y, z;
         player->GetClosePoint(x, y, z, player->GetCombatReach(), PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
 
-        Creature* pet = player->SummonCreature(100043, x, y, z, player->GetOrientation(),
-            TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 60000);
+        Creature* pet = player->SummonCreature(NPC_VIP_PET, x, y, z, player->GetOrientation(),
+            TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, VIP_PET_LIFETIME);
         if (!pet)
             return false;
 
@@ -192,8 +204,16 @@ class SystemVipPet : CreatureScript {
 public:
     SystemVipPet() : CreatureScript("SystemVipPet") {}
 
+    // a despawned pet makes the core drop the player's choice without any message
+    static void RefreshLifetime(Creature* creature)
+    {
+        if (TempSummon* summon = creature->ToTempSummon())
+            summon->SetTimer(VIP_PET_LIFETIME);
+    }
+
     bool OnGossipHello(Player* player, Creature* creature)
     {
+        RefreshLifetime(creature);
         ClearGossipMenuFor(player);
         sV->sendGossipInformation(player, false);
         if (creature->GetCreatorGUID() != player->GetGUID())
@@ -224,7 +244,8 @@ public:
         if(sV->resetInstance)
             AddGossipItemFor(player, 0, "|TInterface/ICONS/Achievement_Dungeon_Icecrown_IcecrownEntrance:28:28:-15:0|t Reset instances.", 0, 9);
         if(sV->saveTeleport)
-            AddGossipItemFor(player, 0, "|TInterface/ICONS/Spell_Holy_LightsGrace:28:28:-15:0|t My teleports.", 0, 10);
+            AddGossipItemFor(player, 0, "|TInterface/ICONS/Spell_Holy_LightsGrace:28:28:-15:0|t My teleports.", 0,
+                ACTION_TELEPORT_MENU);
         AddGossipItemFor(player, 0, "|TInterface/ICONS/Trade_Engineering:28:28:-15:0|t Close.", 0, 100);
 
         SendGossipMenuFor(player, PET_INFO, creature->GetGUID());
@@ -232,6 +253,7 @@ public:
     }
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action)
     {
+        RefreshLifetime(creature);
         ClearGossipMenuFor(player);
         switch (action)
         {
@@ -338,16 +360,39 @@ public:
                 ChatHandler(player->GetSession()).PSendSysMessage("Buffs removed!");
                 OnGossipHello(player, creature);
                 break;
-            case 10:
-                // Teleport system
-                AddGossipItemFor(player, 0, "|TInterface/GUILDBANKFRAME/UI-GuildBankFrame-NewTab:28:28:-15:0|t Add new.", 0, 1, "Name to save your current location.", 0, true);
-                AddGossipItemFor(player, 0, "|TInterface/PAPERDOLLINFOFRAME/UI-GearManager-Undo:28:28:-15:0|t Delete.", 0, 2, "Name to delete.", 0, true);
-                sV->getTeleports(player);
+            case ACTION_TELEPORT_MENU:
+                AddGossipItemFor(player, 0, "|TInterface/GUILDBANKFRAME/UI-GuildBankFrame-NewTab:28:28:-15:0|t "
+                    "Save current location.", 0, ACTION_TELEPORT_SAVE);
+                sV->addTeleportsToGossip(player);
+                AddGossipItemFor(player, 0, "|TInterface/ICONS/Trade_Engineering:28:28:-15:0|t Back.", 0,
+                    ACTION_PET_MAIN_MENU);
                 SendGossipMenuFor(player, 1, creature->GetGUID());
                 break;
-            case 12:
+            case ACTION_TELEPORT_OPTIONS:
+                sV->addTeleportOptionsToGossip(player, sender);
+                AddGossipItemFor(player, 0, "|TInterface/ICONS/Trade_Engineering:28:28:-15:0|t Back.", 0,
+                    ACTION_TELEPORT_MENU);
+                SendGossipMenuFor(player, 1, creature->GetGUID());
+                break;
+            case ACTION_TELEPORT_USE:
                 sV->teleportPlayer(player, sender);
                 CloseGossipMenuFor(player);
+                break;
+            case ACTION_TELEPORT_SAVE:
+                sV->saveTeleportVip(player);
+                OnGossipSelect(player, creature, 0, ACTION_TELEPORT_MENU);
+                break;
+            case ACTION_TELEPORT_DELETE:
+                sV->delTeleportVip(player, sender);
+                OnGossipSelect(player, creature, 0, ACTION_TELEPORT_MENU);
+                break;
+            case ACTION_TELEPORT_RENAME:
+                // accepted with an empty name, the core sends it here instead of OnGossipSelectCode
+                ChatHandler(player->GetSession()).PSendSysMessage("Please type a name.");
+                OnGossipSelect(player, creature, sender, ACTION_TELEPORT_OPTIONS);
+                break;
+            case ACTION_PET_MAIN_MENU:
+                OnGossipHello(player, creature);
                 break;
             default:
                 CloseGossipMenuFor(player);
@@ -356,17 +401,13 @@ public:
         return true;
     }
 
-    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 /*sender*/, uint32 action, const char* code)
+    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, const char* code)
     {
         switch (action)
         {
-            case 1:
-                sV->addTeleportVip(player, code);
-                OnGossipSelect(player, creature, 0, 10);
-                break;
-            case 2:
-                sV->delTeleportVip(player, code);
-                OnGossipSelect(player, creature, 0, 10);
+            case ACTION_TELEPORT_RENAME:
+                sV->renameTeleportVip(player, sender, code);
+                OnGossipSelect(player, creature, sender, ACTION_TELEPORT_OPTIONS);
                 break;
             default:
                 CloseGossipMenuFor(player);

@@ -3,6 +3,8 @@
 #include "BattlefieldMgr.h"
 #include "DBCStores.h"
 #include "MapMgr.h"
+#include "Util.h"
+#include "World.h"
 
 SystemVip* SystemVip::instance()
 {
@@ -234,7 +236,24 @@ void SystemVip::loadTeleportVip(Player* player) {
     }
 }
 
-void SystemVip::addTeleportVip(Player* player, string name) {
+Teleports* SystemVip::findTeleport(uint32 accountId, uint32 id) {
+    for (Teleports& teleport : teleportMap[accountId])
+        if (teleport.id == id)
+            return &teleport;
+
+    return nullptr;
+}
+
+bool SystemVip::isTeleportNameTaken(uint32 accountId, string const& name, uint32 ignoredId) {
+    // case-insensitive like the DB primary key, otherwise the query fails as a duplicate
+    for (Teleports const& teleport : teleportMap[accountId])
+        if (teleport.id != ignoredId && StringEqualI(teleport.name, name))
+            return true;
+
+    return false;
+}
+
+void SystemVip::saveTeleportVip(Player* player) {
     if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
         ChatHandler(player->GetSession()).PSendSysMessage("You cannot save teleports in dungeons, raids, "
             "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
@@ -242,52 +261,102 @@ void SystemVip::addTeleportVip(Player* player, string name) {
     }
 
     uint32 accountId = player->GetSession()->GetAccountId();
-    Teleports teleport = { 0, name, player->GetMapId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation() };
-    uint32 id = 1;
-    if (teleportMap.count(accountId) > 0) {
-        if (teleportMap[accountId].size() == saveTeleportAmount) {
-            ChatHandler(player->GetSession()).PSendSysMessage("You cannot save any more teleports!");
-            return;
-        }
-
-        for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-            if (teleportMap[accountId][i].name == teleport.name) {
-                ChatHandler(player->GetSession()).PSendSysMessage("A teleport with that name already exists!");
-                return;
-            }
-        }
-        id = teleportMap[accountId].back().id + 1;
+    vector<Teleports>& teleports = teleportMap[accountId];
+    if (teleports.size() >= saveTeleportAmount) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save any more teleports!");
+        return;
     }
-    teleport.id = id;
-    teleportMap[accountId].push_back(teleport);
-    // name is typed by the player, escape before building the query
+
+    // named after the area, the player can rename it later
+    string baseName = "Teleport";
+    if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(player->GetAreaId())) {
+        string areaName = area->area_name[player->GetSession()->GetSessionDbcLocale()];
+        if (areaName.empty())
+            areaName = area->area_name[sWorld->GetDefaultDbcLocale()];
+        if (!areaName.empty())
+            baseName = areaName;
+    }
+
+    string name = baseName;
+    for (uint32 suffix = 2; isTeleportNameTaken(accountId, name); ++suffix)
+        name = baseName + " " + to_string(suffix);
+
+    // ids only live in memory, they are renumbered on login
+    uint32 id = teleports.empty() ? 1 : teleports.back().id + 1;
+    Teleports teleport = { id, name, player->GetMapId(), player->GetPositionX(), player->GetPositionY(),
+        player->GetPositionZ(), player->GetOrientation() };
+    teleports.push_back(teleport);
+
     string escapedName = name;
     LoginDatabase.EscapeString(escapedName);
     LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, escapedName, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
-    ChatHandler(player->GetSession()).PSendSysMessage("Location saved successfully.");
+    ChatHandler(player->GetSession()).PSendSysMessage("Location saved as \"{}\".", name);
 }
 
-void SystemVip::delTeleportVip(Player* player, string name) {
+void SystemVip::renameTeleportVip(Player* player, uint32 id, string newName) {
     uint32 accountId = player->GetSession()->GetAccountId();
-    for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-        if (teleportMap[accountId][i].name == name) {
-            teleportMap[accountId].erase(teleportMap[accountId].begin() + i);
-            string escapedName = name;
-            LoginDatabase.EscapeString(escapedName);
-            LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';", accountId, escapedName);
-            return;
-        }
+    Teleports* teleport = findTeleport(accountId, id);
+    if (!teleport)
+        return;
+
+    if (newName.empty() || newName.size() > 50) {
+        ChatHandler(player->GetSession()).PSendSysMessage("The name must have between 1 and 50 characters.");
+        return;
     }
-    ChatHandler(player->GetSession()).PSendSysMessage("Incorrect name.");
+
+    if (isTeleportNameTaken(accountId, newName, id)) {
+        ChatHandler(player->GetSession()).PSendSysMessage("A teleport with that name already exists!");
+        return;
+    }
+
+    // name is typed by the player, escape before building the query
+    string escapedOldName = teleport->name;
+    string escapedNewName = newName;
+    LoginDatabase.EscapeString(escapedOldName);
+    LoginDatabase.EscapeString(escapedNewName);
+    LoginDatabase.Execute("UPDATE account_vip_teleport SET name = '{}' WHERE id = {} AND name = '{}';",
+        escapedNewName, accountId, escapedOldName);
+
+    teleport->name = newName;
+    ChatHandler(player->GetSession()).PSendSysMessage("Teleport renamed to \"{}\".", newName);
 }
 
-void SystemVip::getTeleports(Player* player) {
+void SystemVip::delTeleportVip(Player* player, uint32 id) {
     uint32 accountId = player->GetSession()->GetAccountId();
-    if( teleportMap.count(accountId) != 0){
-        for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-            AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t "+teleportMap[accountId][i].name, teleportMap[accountId][i].id, 12, "Do you want to teleport?", 0, false);
-        }
+    vector<Teleports>& teleports = teleportMap[accountId];
+    for (size_t i = 0; i < teleports.size(); i++) {
+        if (teleports[i].id != id)
+            continue;
+
+        string escapedName = teleports[i].name;
+        LoginDatabase.EscapeString(escapedName);
+        LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';",
+            accountId, escapedName);
+        ChatHandler(player->GetSession()).PSendSysMessage("Teleport \"{}\" deleted.", teleports[i].name);
+        teleports.erase(teleports.begin() + i);
+        return;
     }
+}
+
+void SystemVip::addTeleportsToGossip(Player* player) {
+    uint32 accountId = player->GetSession()->GetAccountId();
+    for (Teleports const& teleport : teleportMap[accountId])
+        AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t " + teleport.name,
+            teleport.id, ACTION_TELEPORT_OPTIONS);
+}
+
+void SystemVip::addTeleportOptionsToGossip(Player* player, uint32 id) {
+    Teleports* teleport = findTeleport(player->GetSession()->GetAccountId(), id);
+    if (!teleport)
+        return;
+
+    AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t Teleport.", id, ACTION_TELEPORT_USE,
+        "Teleport to \"" + teleport->name + "\"?", 0, false);
+    // no popup text: with one the 3.3.5 client shows a confirm box first and the text box only after it
+    AddGossipItemFor(player, 0, "|TInterface/ICONS/INV_Misc_Note_01:28:28:-15:0|t Rename.", id, ACTION_TELEPORT_RENAME,
+        "", 0, true);
+    AddGossipItemFor(player, 0, "|TInterface/PAPERDOLLINFOFRAME/UI-GearManager-Undo:28:28:-15:0|t Delete.", id,
+        ACTION_TELEPORT_DELETE, "Delete \"" + teleport->name + "\"?", 0, false);
 }
 
 void SystemVip::teleportPlayer(Player* player, uint32 id) {
