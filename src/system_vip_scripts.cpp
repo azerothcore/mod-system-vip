@@ -236,6 +236,11 @@ public:
                     ChatHandler(player->GetSession()).PSendSysMessage("You are in combat!");
                     CloseGossipMenuFor(player);
                 }
+                else if (!sV->canUseTeleportAt(player->GetMapId(), player->GetZoneId()))
+                {
+                    ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+                    CloseGossipMenuFor(player);
+                }
                 else
                 {
                     player->TeleportTo(sV->vipZoneMapId, sV->vipZonePosX, sV->vipZonePosY, sV->vipZonePosZ, sV->vipZoneO);

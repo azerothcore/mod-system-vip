@@ -1,4 +1,8 @@
 #include "SystemVip.h"
+#include "AreaDefines.h"
+#include "BattlefieldMgr.h"
+#include "DBCStores.h"
+#include "MapMgr.h"
 
 SystemVip* SystemVip::instance()
 {
@@ -231,6 +235,11 @@ void SystemVip::loadTeleportVip(Player* player) {
 }
 
 void SystemVip::addTeleportVip(Player* player, string name) {
+    if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+        return;
+    }
+
     uint32 accountId = player->GetSession()->GetAccountId();
     Teleports teleport = { 0, name, player->GetMapId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation() };
     uint32 id = 1;
@@ -250,7 +259,10 @@ void SystemVip::addTeleportVip(Player* player, string name) {
     }
     teleport.id = id;
     teleportMap[accountId].push_back(teleport);
-    LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, name, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+    // name is typed by the player, escape before building the query
+    string escapedName = name;
+    LoginDatabase.EscapeString(escapedName);
+    LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, escapedName, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
     ChatHandler(player->GetSession()).PSendSysMessage("Location saved successfully.");
 }
 
@@ -259,7 +271,9 @@ void SystemVip::delTeleportVip(Player* player, string name) {
     for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
         if (teleportMap[accountId][i].name == name) {
             teleportMap[accountId].erase(teleportMap[accountId].begin() + i);
-            LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';", accountId, name);
+            string escapedName = name;
+            LoginDatabase.EscapeString(escapedName);
+            LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';", accountId, escapedName);
             return;
         }
     }
@@ -276,14 +290,36 @@ void SystemVip::getTeleports(Player* player) {
 }
 
 void SystemVip::teleportPlayer(Player* player, uint32 id) {
-    uint32 accountId = player->GetSession()->GetAccountId();
-    Teleports teleport;
-    for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-        if (teleportMap[accountId][i].id == id) {
-            teleport = teleportMap[accountId][i];
-            break;
-        }
+    if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+        return;
     }
 
-    player->TeleportTo(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+    uint32 accountId = player->GetSession()->GetAccountId();
+    for (Teleports const& teleport : teleportMap[accountId]) {
+        if (teleport.id != id)
+            continue;
+
+        // also checks the destination, locations saved before this check existed may be inside an instance
+        uint32 zoneId = sMapMgr->GetZoneId(player->GetPhaseMask(), teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z);
+        if (!canUseTeleportAt(teleport.mapId, zoneId)) {
+            ChatHandler(player->GetSession()).PSendSysMessage("You cannot teleport to that location right now.");
+            return;
+        }
+
+        player->TeleportTo(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+        return;
+    }
+}
+
+bool SystemVip::canUseTeleportAt(uint32 mapId, uint32 zoneId) {
+    MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
+    if (!mapEntry || mapEntry->IsDungeon() || mapEntry->IsBattlegroundOrArena())
+        return false;
+
+    if (zoneId == AREA_WINTERGRASP)
+        if (Battlefield* wintergrasp = sBattlefieldMgr->GetBattlefieldToZoneId(AREA_WINTERGRASP))
+            return !wintergrasp->IsWarTime();
+
+    return true;
 }
