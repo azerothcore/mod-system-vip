@@ -238,7 +238,8 @@ public:
                 }
                 else if (!sV->canUseTeleportAt(player->GetMapId(), player->GetZoneId()))
                 {
-                    ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+                    ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, "
+                        "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
                     CloseGossipMenuFor(player);
                 }
                 else

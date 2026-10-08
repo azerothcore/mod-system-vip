@@ -12,7 +12,7 @@ This module provides a set of VIP features for players on AzerothCore.
 
 - Players who subscribe receive a VIP pet, which gives them access to a menu with special benefits.
 
-- One of the VIP benefits is that players can save their location in a teleport menu to use whenever they want.
+- One of the VIP benefits is that players can save their location in a teleport menu to use later. Teleports cannot be saved or used in dungeons, raids, battlegrounds, arenas, or in Wintergrasp while the battle is active.
 
 - **Custom welcome announcement**: Configurable in `mod_system_vip.conf`.
 - **Rates (experience, honor, professions and gold)**: Configurable in `mod_system_vip.conf`.

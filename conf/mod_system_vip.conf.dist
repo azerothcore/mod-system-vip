@@ -141,6 +141,8 @@ SystemVip.Pet = 0
 #
 #    SystemVip.VipZone
 #        Description: Enables a teleport to a special zone for VIP players.
+#                     Not usable in dungeons, raids, battlegrounds, arenas, or in Wintergrasp while the battle
+#                     is active.
 #        Default:     0 - Disabled
 #                     1 - Enabled
 #
@@ -257,6 +259,8 @@ SystemVip.ResetInstance = 0
 #
 #    SystemVip.SaveTeleport
 #        Description: Enables an option to save locations to teleport to.
+#                     Locations cannot be saved or used in dungeons, raids, battlegrounds, arenas, or in
+#                     Wintergrasp while the battle is active.
 #        Default:     0 - Disabled
 #                     1 - Enabled
 #

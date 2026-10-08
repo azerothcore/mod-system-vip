@@ -87,6 +87,7 @@ public:
     void delTeleportVip(Player* player, string name);
     void getTeleports(Player* player);
     void teleportPlayer(Player* player, uint32 id);
+    bool isTeleportMapAllowed(uint32 mapId);
     bool canUseTeleportAt(uint32 mapId, uint32 zoneId);
 };
 

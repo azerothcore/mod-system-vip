@@ -236,7 +236,8 @@ void SystemVip::loadTeleportVip(Player* player) {
 
 void SystemVip::addTeleportVip(Player* player, string name) {
     if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
-        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save teleports in dungeons, raids, "
+            "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
         return;
     }
 
@@ -291,7 +292,8 @@ void SystemVip::getTeleports(Player* player) {
 
 void SystemVip::teleportPlayer(Player* player, uint32 id) {
     if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
-        ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, battlegrounds, arenas or during the Battle for Wintergrasp.");
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, "
+            "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
         return;
     }
 
@@ -300,9 +302,13 @@ void SystemVip::teleportPlayer(Player* player, uint32 id) {
         if (teleport.id != id)
             continue;
 
-        // also checks the destination, locations saved before this check existed may be inside an instance
-        uint32 zoneId = sMapMgr->GetZoneId(player->GetPhaseMask(), teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z);
-        if (!canUseTeleportAt(teleport.mapId, zoneId)) {
+        // also checks the destination, locations saved before this check existed may be inside an instance.
+        // map and coords first: GetZoneId asserts on a map id missing from Map.dbc
+        if (!MapMgr::IsValidMapCoord(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z,
+                teleport.orientation)
+            || !isTeleportMapAllowed(teleport.mapId)
+            || !canUseTeleportAt(teleport.mapId, sMapMgr->GetZoneId(player->GetPhaseMask(), teleport.mapId,
+                teleport.coord_x, teleport.coord_y, teleport.coord_z))) {
             ChatHandler(player->GetSession()).PSendSysMessage("You cannot teleport to that location right now.");
             return;
         }
@@ -312,9 +318,13 @@ void SystemVip::teleportPlayer(Player* player, uint32 id) {
     }
 }
 
-bool SystemVip::canUseTeleportAt(uint32 mapId, uint32 zoneId) {
+bool SystemVip::isTeleportMapAllowed(uint32 mapId) {
     MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
-    if (!mapEntry || mapEntry->IsDungeon() || mapEntry->IsBattlegroundOrArena())
+    return mapEntry && !mapEntry->IsDungeon() && !mapEntry->IsBattlegroundOrArena();
+}
+
+bool SystemVip::canUseTeleportAt(uint32 mapId, uint32 zoneId) {
+    if (!isTeleportMapAllowed(mapId))
         return false;
 
     if (zoneId == AREA_WINTERGRASP)
