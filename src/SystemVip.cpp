@@ -1,4 +1,10 @@
 #include "SystemVip.h"
+#include "AreaDefines.h"
+#include "BattlefieldMgr.h"
+#include "DBCStores.h"
+#include "MapMgr.h"
+#include "Util.h"
+#include "World.h"
 
 SystemVip* SystemVip::instance()
 {
@@ -13,7 +19,7 @@ void SystemVip::LoadConfig() {
     TokenIcon = sConfigMgr->GetOption<string>("SystemVip.TokenIcon", "|TInterface/ICONS/inv_misc_rune_05:15:15:-15:0|t ");
 
     loginAnnounce = sConfigMgr->GetOption<bool>("SystemVip.LoginAnnounce", false);
-    loginMessage = sConfigMgr->GetOption<string>("SystemVip.LoginAnnounceMessage", "Player Vip: %s se ha conectado.");
+    loginMessage = sConfigMgr->GetOption<string>("SystemVip.LoginAnnounceMessage", "VIP player %s has logged in.");
     rateCustom = sConfigMgr->GetOption<bool>("SystemVip.EnableRateCustom", false);
     rateXp = sConfigMgr->GetOption<uint32>("SystemVip.RateXP", 1);
     professionRate = sConfigMgr->GetOption<uint32>("SystemVip.ProfessionRate", 1);
@@ -23,11 +29,11 @@ void SystemVip::LoadConfig() {
 
     petEnable = sConfigMgr->GetOption<bool>("SystemVip.Pet", false);
     vipZone = sConfigMgr->GetOption<bool>("SystemVip.VipZone", false);
-    vipZoneMapId = sConfigMgr->GetOption<uint32>("SystemVip.HonorRate", 571);
-    vipZonePosX = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 5804.15);
-    vipZonePosY = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 624.771);
-    vipZonePosZ = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 647.767);
-    vipZoneO = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 1.64);
+    vipZoneMapId = sConfigMgr->GetOption<uint32>("SystemVip.VipZoneMapId", 571);
+    vipZonePosX = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorX", 5804.15);
+    vipZonePosY = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorY", 624.771);
+    vipZonePosZ = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorZ", 647.767);
+    vipZoneO = sConfigMgr->GetOption<float>("SystemVip.VipZoneOrien", 1.64);
     armorRep = sConfigMgr->GetOption<bool>("SystemVip.ArmorRep", false);
     bankEnable = sConfigMgr->GetOption<bool>("SystemVip.Bank", false);
     mailEnable = sConfigMgr->GetOption<bool>("SystemVip.Mail", false);
@@ -88,7 +94,7 @@ string SystemVip::getFormatedVipTime(Player* player) {
     minutes = minutes % 60;
     // int seconds = time % 60;
 
-    string result = to_string(days) + "dias " + to_string(hours) + "horas " + to_string(minutes) + "minutos.";
+    string result = to_string(days) + " days, " + to_string(hours) + " hours, " + to_string(minutes) + " minutes.";
     return result;
 }
 
@@ -110,47 +116,47 @@ string SystemVip::getInformationVip(Player* player) {
     std::ostringstream text;
     std::string accName;
     if (AccountMgr::GetName(player->GetSession()->GetAccountId(), accName))
-        text << "Tiempo restante: |CFF0DD617" << getFormatedVipTime(player) << "|r\n";
+        text << "Remaining time: |CFF0DD617" << getFormatedVipTime(player) << "|r\n";
 
     return text.str();
 }
 
 string SystemVip::getInformationAdavantages() {
     std::ostringstream text;
-    text << "Beneficios:\n";
+    text << "Benefits:\n";
     text << "----------------------------------\n";
     if(loginAnnounce)
-        text << "|TInterface/ICONS/Spell_unused2:15:15:-10:-5|t Anuncio al iniciar sesión." << "\n";
+        text << "|TInterface/ICONS/Spell_unused2:15:15:-10:-5|t Login announcement." << "\n";
     if (rateCustom) {
-        text << "|TInterface/ICONS/Achievement_BG_KillXEnemies_GeneralsRoom:15:15:-10:-8|t Rate XP           x " << rateXp << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_overcome500disadvantage:15:15:-10:-8|t Rate profesiones  x " << professionRate << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_ABshutout:15:15:-10:-8|t Rate de oro       x " << goldRate << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_kill_carrier_opposing_flagroom:15:15:-10::-8|t Rate honor        x " << honorRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_KillXEnemies_GeneralsRoom:15:15:-10:-8|t XP rate           x " << rateXp << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_overcome500disadvantage:15:15:-10:-8|t Profession rate   x " << professionRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_ABshutout:15:15:-10:-8|t Gold rate         x " << goldRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_kill_carrier_opposing_flagroom:15:15:-10::-8|t Honor rate        x " << honorRate << "\n";
     }
     if(ghostMount)
-        text << "|TInterface/ICONS/ability_vanish:15:15:-10::-8|t Velocidad al ser fantasma." << "\n";
+        text << "|TInterface/ICONS/ability_vanish:15:15:-10::-8|t Ghost speed boost." << "\n";
     if (petEnable) {
-        text << "|TInterface/ICONS/ability_hunter_beastcall:15:15:-10::-8|t Mascota VIP." << "\n";
+        text << "|TInterface/ICONS/ability_hunter_beastcall:15:15:-10::-8|t VIP pet." << "\n";
         if(vipZone)
-            text << "|TInterface/ICONS/Achievement_Zone_ZulDrak_12:15:15:-10::-8|t Zona Vip." << "\n";
+            text << "|TInterface/ICONS/Achievement_Zone_ZulDrak_12:15:15:-10::-8|t VIP zone." << "\n";
         if(armorRep)
-            text << "|TInterface/ICONS/INV_Hammer_20:15:15:-10::-8|t Reparar Armaduras." << "\n";
+            text << "|TInterface/ICONS/INV_Hammer_20:15:15:-10::-8|t Armor repair." << "\n";
         if(bankEnable)
-            text << "|TInterface/ICONS/INV_Ingot_03:15:15:-10::-8|t Banco personal." << "\n";
+            text << "|TInterface/ICONS/INV_Ingot_03:15:15:-10::-8|t Personal bank." << "\n";
         if(mailEnable)
-            text << "|TInterface/ICONS/inv_letter_15:15:15:-10::-8|t Abrir correo." << "\n";
+            text << "|TInterface/ICONS/inv_letter_15:15:15:-10::-8|t Open mailbox." << "\n";
         if(buffsEnable)
-            text << "|TInterface/ICONS/Spell_Magic_GreaterBlessingofKings:15:15:-10::-8|t Buffos VIP." << "\n";
+            text << "|TInterface/ICONS/Spell_Magic_GreaterBlessingofKings:15:15:-10::-8|t VIP buffs." << "\n";
         if(refreshEnable)
-            text << "|TInterface/ICONS/Spell_Holy_LayOnHands:15:15:-10::-8|t Restaurar hp/mana." << "\n";
+            text << "|TInterface/ICONS/Spell_Holy_LayOnHands:15:15:-10::-8|t Restore HP/mana." << "\n";
         if(sicknessEnbale)
-            text << "|TInterface/ICONS/spell_shadow_deathscream:15:15:-10::-8|t Eliminar dolencia." << "\n";
+            text << "|TInterface/ICONS/spell_shadow_deathscream:15:15:-10::-8|t Remove resurrection sickness." << "\n";
         if(deserterEnable)
-            text << "|TInterface/ICONS/ability_druid_cower:15:15:-10::-8|t Eliminar desertor." << "\n";
+            text << "|TInterface/ICONS/ability_druid_cower:15:15:-10::-8|t Remove deserter." << "\n";
         if(resetInstance)
-            text << "|TInterface/ICONS/Achievement_Dungeon_Icecrown_IcecrownEntrance:15:15:-10::-8|t Reiniciar instancias." << "\n";
+            text << "|TInterface/ICONS/Achievement_Dungeon_Icecrown_IcecrownEntrance:15:15:-10::-8|t Reset instances." << "\n";
         if(saveTeleport)
-            text << "|TInterface/ICONS/Spell_Holy_LightsGrace:15:15:-10::-8|t Guardar zonas para teleport." << "\n";
+            text << "|TInterface/ICONS/Spell_Holy_LightsGrace:15:15:-10::-8|t Save teleport locations." << "\n";
     }
     return text.str();
 }
@@ -159,19 +165,19 @@ void SystemVip::sendGossipInformation(Player* player, bool advantages) {
     std::ostringstream text;
     std::string accName;
     if (AccountMgr::GetName(player->GetSession()->GetAccountId(), accName))
-        text << "Usuario: |CFF0E3CE6" << accName << "|r\n";
+        text << "Account: |CFF0E3CE6" << accName << "|r\n";
 
     if (isVip(player)) {
-        text << "Tiempo restante: |CFF0DD617" << getFormatedVipTime(player) << "|r\n\n";
-        text << "Gracias por comprar una suscripcion vip.\n\n";
+        text << "Remaining time: |CFF0DD617" << getFormatedVipTime(player) << "|r\n\n";
+        text << "Thank you for purchasing a VIP subscription.\n\n";
     }
     else {
-        text << "No tienes una suscripción vip disponible.\n";
-        text << "Compra una suscripción y disfruta de todos los beneficios de ser vip!\n";
+        text << "You do not have an active VIP subscription.\n";
+        text << "Purchase a subscription and enjoy all the benefits of being VIP!\n";
     }
 
     if (advantages) {
-        text << "Recuerda que al comprar vip tienes beneficios en todos los personajes de tu cuenta." << "\n";
+        text << "Remember that VIP benefits apply to every character on your account." << "\n";
         text << getInformationAdavantages();
     }
 
@@ -218,6 +224,7 @@ string SystemVip::getLoginMessage(Player* player) {
 
 void SystemVip::loadTeleportVip(Player* player) {
     uint32 accountId = player->GetSession()->GetAccountId();
+    teleportMap.erase(accountId);
     QueryResult result = LoginDatabase.Query("SELECT * FROM account_vip_teleport WHERE id = {};", accountId);
     if (result) {
         uint32 i = 1;
@@ -230,60 +237,179 @@ void SystemVip::loadTeleportVip(Player* player) {
     }
 }
 
-void SystemVip::addTeleportVip(Player* player, string name) {
-    uint32 accountId = player->GetSession()->GetAccountId();
-    Teleports teleport = { 0, name, player->GetMapId(), player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation() };
-    uint32 id = 1;
-    if (teleportMap.count(accountId) > 0) {
-        if (teleportMap[accountId].size() == saveTeleportAmount) {
-            ChatHandler(player->GetSession()).PSendSysMessage("No puedes guardar mas Teleports!");
-            return;
-        }
+Teleports* SystemVip::findTeleport(uint32 accountId, uint32 id) {
+    for (Teleports& teleport : teleportMap[accountId])
+        if (teleport.id == id)
+            return &teleport;
 
-        for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-            if (teleportMap[accountId][i].name == teleport.name) {
-                ChatHandler(player->GetSession()).PSendSysMessage("Ya existe un teleport con el mismo nombre!");
-                return;
-            }
-        }
-        id = teleportMap[accountId].back().id + 1;
-    }
-    teleport.id = id;
-    teleportMap[accountId].push_back(teleport);
-    LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, name, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
-    ChatHandler(player->GetSession()).PSendSysMessage("Ubicación guardada con exito.");
+    return nullptr;
 }
 
-void SystemVip::delTeleportVip(Player* player, string name) {
-    uint32 accountId = player->GetSession()->GetAccountId();
-    for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-        if (teleportMap[accountId][i].name == name) {
-            teleportMap[accountId].erase(teleportMap[accountId].begin() + i);
-            LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';", accountId, name);
-            return;
-        }
-    }
-    ChatHandler(player->GetSession()).PSendSysMessage("Nombre incorrecto.");
+bool SystemVip::isTeleportNameTaken(uint32 accountId, string const& name, uint32 ignoredId) {
+    // memory first: a save still queued for the DB is only there
+    for (Teleports const& teleport : teleportMap[accountId])
+        if (teleport.id != ignoredId && StringEqualI(teleport.name, name))
+            return true;
+
+    // then the DB, its collation also ignores accents and the primary key follows it
+    string escapedName = name;
+    LoginDatabase.EscapeString(escapedName);
+    QueryResult result = LoginDatabase.Query("SELECT name FROM account_vip_teleport WHERE id = {} AND name = '{}';",
+        accountId, escapedName);
+    if (!result)
+        return false;
+
+    // renaming a teleport may match its own row, e.g. changing only an accent
+    Teleports* ignored = ignoredId ? findTeleport(accountId, ignoredId) : nullptr;
+    return !ignored || (*result)[0].Get<string>() != ignored->name;
 }
 
-void SystemVip::getTeleports(Player* player) {
-    uint32 accountId = player->GetSession()->GetAccountId();
-    if( teleportMap.count(accountId) != 0){
-        for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-            AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t "+teleportMap[accountId][i].name, teleportMap[accountId][i].id, 12, "Quieres teletransportarte?", 0, false);
-        }
+void SystemVip::saveTeleportVip(Player* player) {
+    if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save teleports in dungeons, raids, "
+            "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
+        return;
     }
+
+    uint32 accountId = player->GetSession()->GetAccountId();
+    vector<Teleports>& teleports = teleportMap[accountId];
+    if (teleports.size() >= saveTeleportAmount) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot save any more teleports!");
+        return;
+    }
+
+    // named after the area, the player can rename it later
+    string baseName = "Teleport";
+    if (AreaTableEntry const* area = sAreaTableStore.LookupEntry(player->GetAreaId())) {
+        string areaName = area->area_name[player->GetSession()->GetSessionDbcLocale()];
+        if (areaName.empty())
+            areaName = area->area_name[sWorld->GetDefaultDbcLocale()];
+        if (!areaName.empty())
+            baseName = areaName;
+    }
+
+    string name = baseName;
+    for (uint32 suffix = 2; isTeleportNameTaken(accountId, name); ++suffix)
+        name = baseName + " " + to_string(suffix);
+
+    // ids only live in memory, they are renumbered on login
+    uint32 id = teleports.empty() ? 1 : teleports.back().id + 1;
+    Teleports teleport = { id, name, player->GetMapId(), player->GetPositionX(), player->GetPositionY(),
+        player->GetPositionZ(), player->GetOrientation() };
+    teleports.push_back(teleport);
+
+    string escapedName = name;
+    LoginDatabase.EscapeString(escapedName);
+    LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, escapedName, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+    ChatHandler(player->GetSession()).PSendSysMessage("Location saved as \"{}\".", name);
+}
+
+void SystemVip::renameTeleportVip(Player* player, uint32 id, string newName) {
+    uint32 accountId = player->GetSession()->GetAccountId();
+    Teleports* teleport = findTeleport(accountId, id);
+    if (!teleport)
+        return;
+
+    if (newName.empty() || newName.size() > 50) {
+        ChatHandler(player->GetSession()).PSendSysMessage("The name must have between 1 and 50 characters.");
+        return;
+    }
+
+    if (isTeleportNameTaken(accountId, newName, id)) {
+        ChatHandler(player->GetSession()).PSendSysMessage("A teleport with that name already exists!");
+        return;
+    }
+
+    // name is typed by the player, escape before building the query
+    string escapedOldName = teleport->name;
+    string escapedNewName = newName;
+    LoginDatabase.EscapeString(escapedOldName);
+    LoginDatabase.EscapeString(escapedNewName);
+    LoginDatabase.Execute("UPDATE account_vip_teleport SET name = '{}' WHERE id = {} AND name = '{}';",
+        escapedNewName, accountId, escapedOldName);
+
+    teleport->name = newName;
+    ChatHandler(player->GetSession()).PSendSysMessage("Teleport renamed to \"{}\".", newName);
+}
+
+void SystemVip::delTeleportVip(Player* player, uint32 id) {
+    uint32 accountId = player->GetSession()->GetAccountId();
+    vector<Teleports>& teleports = teleportMap[accountId];
+    for (size_t i = 0; i < teleports.size(); i++) {
+        if (teleports[i].id != id)
+            continue;
+
+        string escapedName = teleports[i].name;
+        LoginDatabase.EscapeString(escapedName);
+        LoginDatabase.Execute("DELETE FROM account_vip_teleport WHERE id = {} AND name = '{}';",
+            accountId, escapedName);
+        ChatHandler(player->GetSession()).PSendSysMessage("Teleport \"{}\" deleted.", teleports[i].name);
+        teleports.erase(teleports.begin() + i);
+        return;
+    }
+}
+
+void SystemVip::addTeleportsToGossip(Player* player) {
+    uint32 accountId = player->GetSession()->GetAccountId();
+    for (Teleports const& teleport : teleportMap[accountId])
+        AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t " + teleport.name,
+            teleport.id, ACTION_TELEPORT_OPTIONS);
+}
+
+void SystemVip::addTeleportOptionsToGossip(Player* player, uint32 id) {
+    Teleports* teleport = findTeleport(player->GetSession()->GetAccountId(), id);
+    if (!teleport)
+        return;
+
+    AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t Teleport.", id, ACTION_TELEPORT_USE,
+        "Teleport to \"" + teleport->name + "\"?", 0, false);
+    // no popup text: with one the 3.3.5 client shows a confirm box first and the text box only after it
+    AddGossipItemFor(player, 0, "|TInterface/ICONS/INV_Misc_Note_01:28:28:-15:0|t Rename.", id, ACTION_TELEPORT_RENAME,
+        "", 0, true);
+    AddGossipItemFor(player, 0, "|TInterface/PAPERDOLLINFOFRAME/UI-GearManager-Undo:28:28:-15:0|t Delete.", id,
+        ACTION_TELEPORT_DELETE, "Delete \"" + teleport->name + "\"?", 0, false);
 }
 
 void SystemVip::teleportPlayer(Player* player, uint32 id) {
-    uint32 accountId = player->GetSession()->GetAccountId();
-    Teleports teleport;
-    for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-        if (teleportMap[accountId][i].id == id) {
-            teleport = teleportMap[accountId][i];
-            break;
-        }
+    if (!canUseTeleportAt(player->GetMapId(), player->GetZoneId())) {
+        ChatHandler(player->GetSession()).PSendSysMessage("You cannot use teleports in dungeons, raids, "
+            "battlegrounds, arenas, or in Wintergrasp while the battle is active.");
+        return;
     }
 
-    player->TeleportTo(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+    uint32 accountId = player->GetSession()->GetAccountId();
+    for (Teleports const& teleport : teleportMap[accountId]) {
+        if (teleport.id != id)
+            continue;
+
+        // also checks the destination, locations saved before this check existed may be inside an instance.
+        // map and coords first: GetZoneId asserts on a map id missing from Map.dbc
+        if (!MapMgr::IsValidMapCoord(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z,
+                teleport.orientation)
+            || !isTeleportMapAllowed(teleport.mapId)
+            || !canUseTeleportAt(teleport.mapId, sMapMgr->GetZoneId(player->GetPhaseMask(), teleport.mapId,
+                teleport.coord_x, teleport.coord_y, teleport.coord_z))) {
+            ChatHandler(player->GetSession()).PSendSysMessage("You cannot teleport to that location right now.");
+            return;
+        }
+
+        player->TeleportTo(teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
+        return;
+    }
+}
+
+bool SystemVip::isTeleportMapAllowed(uint32 mapId) {
+    MapEntry const* mapEntry = sMapStore.LookupEntry(mapId);
+    return mapEntry && !mapEntry->IsDungeon() && !mapEntry->IsBattlegroundOrArena();
+}
+
+bool SystemVip::canUseTeleportAt(uint32 mapId, uint32 zoneId) {
+    if (!isTeleportMapAllowed(mapId))
+        return false;
+
+    if (zoneId == AREA_WINTERGRASP)
+        if (Battlefield* wintergrasp = sBattlefieldMgr->GetBattlefieldToZoneId(AREA_WINTERGRASP))
+            return !wintergrasp->IsWarTime();
+
+    return true;
 }

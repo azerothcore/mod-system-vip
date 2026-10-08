@@ -12,7 +12,7 @@ Este módulo proporciona una serie de características VIP para los jugadores en
 
 -  Los jugadores que se suscriban recibirán una mascota VIP, la cual les permitirá acceder a un menú con beneficios especiales.
 
--  Uno de los beneficios de la suscripción VIP es que los jugadores pueden guardar su ubicación en un menú de teletransporte para usarlo cuando lo deseen
+-  Uno de los beneficios de la suscripción VIP es que los jugadores pueden guardar su ubicación en un menú de teletransporte para usarlo más tarde. No se pueden guardar ni usar en mazmorras, bandas, campos de batalla, arenas, ni en Conquista del Invierno mientras la batalla está activa.
 
 - **Anuncio de bienvenida personalizado**: Configurable desde `SystemVip.conf`.
 - **Rates (experiencia, honor, profesiones y oro)**: Configurable desde `SystemVip.conf`.

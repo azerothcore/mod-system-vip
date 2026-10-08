@@ -1,34 +1,34 @@
-# Sistema VIP para AzerothCore
+# VIP System for AzerothCore
 
 Read in: [English :gb:](README.md) | [Spanish :es:](README_es.md)
 
-Este módulo proporciona una serie de características VIP para los jugadores en AzerothCore.
+This module provides a set of VIP features for players on AzerothCore.
 
-## Características
+## Features
 
-- Los jugadores pueden suscribirse al sistema VIP a través de un NPC por una cantidad de tokens que es configurable. La suscripción es válida por 7 días y también es configurable.
+- Players can subscribe to the VIP system through an NPC for a configurable amount of tokens. The subscription lasts 7 days by default and is also configurable.
 
--  Los jugadores pueden consultar la información de su suscripción y los beneficios que poseen.
+- Players can check their subscription details and the benefits they have.
 
--  Los jugadores que se suscriban recibirán una mascota VIP, la cual les permitirá acceder a un menú con beneficios especiales.
+- Players who subscribe receive a VIP pet, which gives them access to a menu with special benefits.
 
--  Uno de los beneficios de la suscripción VIP es que los jugadores pueden guardar su ubicación en un menú de teletransporte para usarlo cuando lo deseen
+- One of the VIP benefits is that players can save their location in a teleport menu to use later. Teleports cannot be saved or used in dungeons, raids, battlegrounds, arenas, or in Wintergrasp while the battle is active.
 
-- **Anuncio de bienvenida personalizado**: Configurable desde `SystemVip.conf`.
-- **Rates (experiencia, honor, profesiones y oro)**: Configurable desde `SystemVip.conf`.
-- **Montura cuando es fantasma**: Configurable desde `SystemVip.conf`.
-- **Mascota Vip**: Configurable desde `SystemVip.conf`.
-- **Zona Vip**: Configurable desde `SystemVip.conf`.
-- **Reparar Armaduras**: Configurable desde `SystemVip.conf`.
-- **Banco**: Configurable desde `SystemVip.conf`.
-- **Correo**: Configurable desde `SystemVip.conf`.
-- **Buffs**: Configurable desde `SystemVip.conf`.
-- **Restaurar hp/mana**: Configurable desde `SystemVip.conf`.
-- **Quitar dolencia**: Configurable desde `SystemVip.conf`.
-- **Quitar desertor**: Configurable desde `SystemVip.conf`.
-- **Reiniciar instancias**: Configurable desde `SystemVip.conf`.
-- **Guardar ubicaciones**: Configurable desde `SystemVip.conf`.
+- **Custom welcome announcement**: Configurable in `mod_system_vip.conf`.
+- **Rates (experience, honor, professions and gold)**: Configurable in `mod_system_vip.conf`.
+- **Ghost speed boost**: Configurable in `mod_system_vip.conf`.
+- **VIP pet**: Configurable in `mod_system_vip.conf`.
+- **VIP zone**: Configurable in `mod_system_vip.conf`.
+- **Armor repair**: Configurable in `mod_system_vip.conf`.
+- **Bank**: Configurable in `mod_system_vip.conf`.
+- **Mailbox**: Configurable in `mod_system_vip.conf`.
+- **Buffs**: Configurable in `mod_system_vip.conf`.
+- **Restore HP/mana**: Configurable in `mod_system_vip.conf`.
+- **Remove resurrection sickness**: Configurable in `mod_system_vip.conf`.
+- **Remove deserter**: Configurable in `mod_system_vip.conf`.
+- **Reset instances**: Configurable in `mod_system_vip.conf`.
+- **Saved locations**: Configurable in `mod_system_vip.conf`.
 
-## Contacto
+## Contact
 
-Si tienes alguna pregunta o problema con el módulo, puedes contactarme en Discord. Mi usuario es `black7in`.
+If you have any questions or issues with the module, you can contact me on Discord. My username is `black7in`.
