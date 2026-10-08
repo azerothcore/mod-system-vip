@@ -192,7 +192,8 @@ public:
             return false;
 
         pet->GetMotionMaster()->MoveFollow(player, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
-        pet->SetFaction(player->GetFaction());
+        // friendly to everyone so it never fights, with the player's faction enemies could attack it
+        pet->SetFaction(FACTION_FRIENDLY);
         pet->SetLevel(player->GetLevel());
         pet->SetCreatorGUID(player->GetGUID());
         return false;
