@@ -224,6 +224,7 @@ string SystemVip::getLoginMessage(Player* player) {
 
 void SystemVip::loadTeleportVip(Player* player) {
     uint32 accountId = player->GetSession()->GetAccountId();
+    teleportMap.erase(accountId);
     QueryResult result = LoginDatabase.Query("SELECT * FROM account_vip_teleport WHERE id = {};", accountId);
     if (result) {
         uint32 i = 1;
@@ -245,12 +246,22 @@ Teleports* SystemVip::findTeleport(uint32 accountId, uint32 id) {
 }
 
 bool SystemVip::isTeleportNameTaken(uint32 accountId, string const& name, uint32 ignoredId) {
-    // case-insensitive like the DB primary key, otherwise the query fails as a duplicate
+    // memory first: a save still queued for the DB is only there
     for (Teleports const& teleport : teleportMap[accountId])
         if (teleport.id != ignoredId && StringEqualI(teleport.name, name))
             return true;
 
-    return false;
+    // then the DB, its collation also ignores accents and the primary key follows it
+    string escapedName = name;
+    LoginDatabase.EscapeString(escapedName);
+    QueryResult result = LoginDatabase.Query("SELECT name FROM account_vip_teleport WHERE id = {} AND name = '{}';",
+        accountId, escapedName);
+    if (!result)
+        return false;
+
+    // renaming a teleport may match its own row, e.g. changing only an accent
+    Teleports* ignored = ignoredId ? findTeleport(accountId, ignoredId) : nullptr;
+    return !ignored || (*result)[0].Get<string>() != ignored->name;
 }
 
 void SystemVip::saveTeleportVip(Player* player) {

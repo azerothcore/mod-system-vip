@@ -37,13 +37,14 @@ public:
             ChatHandler(player->GetSession()).PSendSysMessage("Remaining VIP subscription time: |cff4CFF00{}|r", sV->getFormatedVipTime(player).c_str());
 
         sV->delExpireVip(player);
-        if (sV->saveTeleport && sV->isVip(player))
+        // loaded for non VIP too, buying VIP mid-session must see the rows already in the DB
+        if (sV->saveTeleport)
             sV->loadTeleportVip(player);
     }
 
     void OnPlayerLogout(Player* player) override
     {
-        if (sV->saveTeleport && sV->isVip(player))
+        if (sV->saveTeleport)
             sV->teleportMap.erase(player->GetSession()->GetAccountId());
     }
 
@@ -212,12 +213,29 @@ public:
             summon->SetTimer(VIP_PET_LIFETIME);
     }
 
+    // only the owner, while still VIP, can use the pet and keep it alive
+    static bool CanUsePet(Player* player, Creature* creature)
+    {
+        if (creature->GetCreatorGUID() != player->GetGUID())
+            return false;
+
+        if (!sV->isVip(player))
+        {
+            ChatHandler(player->GetSession()).PSendSysMessage("Your VIP subscription has expired.");
+            CloseGossipMenuFor(player);
+            creature->DespawnOrUnsummon();
+            return false;
+        }
+
+        RefreshLifetime(creature);
+        return true;
+    }
+
     bool OnGossipHello(Player* player, Creature* creature)
     {
-        RefreshLifetime(creature);
         ClearGossipMenuFor(player);
         sV->sendGossipInformation(player, false);
-        if (creature->GetCreatorGUID() != player->GetGUID())
+        if (!CanUsePet(player, creature))
             return true;
 
         if (!sV->petEnable)
@@ -254,7 +272,12 @@ public:
     }
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action)
     {
-        RefreshLifetime(creature);
+        if (!CanUsePet(player, creature))
+        {
+            CloseGossipMenuFor(player);
+            return true;
+        }
+
         ClearGossipMenuFor(player);
         switch (action)
         {
@@ -402,8 +425,14 @@ public:
         return true;
     }
 
-    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, const char* code)
+    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code)
     {
+        if (!CanUsePet(player, creature))
+        {
+            CloseGossipMenuFor(player);
+            return true;
+        }
+
         switch (action)
         {
             case ACTION_TELEPORT_RENAME:
