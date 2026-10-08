@@ -13,7 +13,7 @@ void SystemVip::LoadConfig() {
     TokenIcon = sConfigMgr->GetOption<string>("SystemVip.TokenIcon", "|TInterface/ICONS/inv_misc_rune_05:15:15:-15:0|t ");
 
     loginAnnounce = sConfigMgr->GetOption<bool>("SystemVip.LoginAnnounce", false);
-    loginMessage = sConfigMgr->GetOption<string>("SystemVip.LoginAnnounceMessage", "Player Vip: %s se ha conectado.");
+    loginMessage = sConfigMgr->GetOption<string>("SystemVip.LoginAnnounceMessage", "VIP player %s has logged in.");
     rateCustom = sConfigMgr->GetOption<bool>("SystemVip.EnableRateCustom", false);
     rateXp = sConfigMgr->GetOption<uint32>("SystemVip.RateXP", 1);
     professionRate = sConfigMgr->GetOption<uint32>("SystemVip.ProfessionRate", 1);
@@ -23,11 +23,11 @@ void SystemVip::LoadConfig() {
 
     petEnable = sConfigMgr->GetOption<bool>("SystemVip.Pet", false);
     vipZone = sConfigMgr->GetOption<bool>("SystemVip.VipZone", false);
-    vipZoneMapId = sConfigMgr->GetOption<uint32>("SystemVip.HonorRate", 571);
-    vipZonePosX = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 5804.15);
-    vipZonePosY = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 624.771);
-    vipZonePosZ = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 647.767);
-    vipZoneO = sConfigMgr->GetOption<float>("SystemVip.HonorRate", 1.64);
+    vipZoneMapId = sConfigMgr->GetOption<uint32>("SystemVip.VipZoneMapId", 571);
+    vipZonePosX = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorX", 5804.15);
+    vipZonePosY = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorY", 624.771);
+    vipZonePosZ = sConfigMgr->GetOption<float>("SystemVip.VipZoneCoorZ", 647.767);
+    vipZoneO = sConfigMgr->GetOption<float>("SystemVip.VipZoneOrien", 1.64);
     armorRep = sConfigMgr->GetOption<bool>("SystemVip.ArmorRep", false);
     bankEnable = sConfigMgr->GetOption<bool>("SystemVip.Bank", false);
     mailEnable = sConfigMgr->GetOption<bool>("SystemVip.Mail", false);
@@ -88,7 +88,7 @@ string SystemVip::getFormatedVipTime(Player* player) {
     minutes = minutes % 60;
     // int seconds = time % 60;
 
-    string result = to_string(days) + "dias " + to_string(hours) + "horas " + to_string(minutes) + "minutos.";
+    string result = to_string(days) + " days, " + to_string(hours) + " hours, " + to_string(minutes) + " minutes.";
     return result;
 }
 
@@ -110,47 +110,47 @@ string SystemVip::getInformationVip(Player* player) {
     std::ostringstream text;
     std::string accName;
     if (AccountMgr::GetName(player->GetSession()->GetAccountId(), accName))
-        text << "Tiempo restante: |CFF0DD617" << getFormatedVipTime(player) << "|r\n";
+        text << "Remaining time: |CFF0DD617" << getFormatedVipTime(player) << "|r\n";
 
     return text.str();
 }
 
 string SystemVip::getInformationAdavantages() {
     std::ostringstream text;
-    text << "Beneficios:\n";
+    text << "Benefits:\n";
     text << "----------------------------------\n";
     if(loginAnnounce)
-        text << "|TInterface/ICONS/Spell_unused2:15:15:-10:-5|t Anuncio al iniciar sesión." << "\n";
+        text << "|TInterface/ICONS/Spell_unused2:15:15:-10:-5|t Login announcement." << "\n";
     if (rateCustom) {
-        text << "|TInterface/ICONS/Achievement_BG_KillXEnemies_GeneralsRoom:15:15:-10:-8|t Rate XP           x " << rateXp << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_overcome500disadvantage:15:15:-10:-8|t Rate profesiones  x " << professionRate << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_ABshutout:15:15:-10:-8|t Rate de oro       x " << goldRate << "\n";
-        text << "|TInterface/ICONS/Achievement_BG_kill_carrier_opposing_flagroom:15:15:-10::-8|t Rate honor        x " << honorRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_KillXEnemies_GeneralsRoom:15:15:-10:-8|t XP rate           x " << rateXp << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_overcome500disadvantage:15:15:-10:-8|t Profession rate   x " << professionRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_ABshutout:15:15:-10:-8|t Gold rate         x " << goldRate << "\n";
+        text << "|TInterface/ICONS/Achievement_BG_kill_carrier_opposing_flagroom:15:15:-10::-8|t Honor rate        x " << honorRate << "\n";
     }
     if(ghostMount)
-        text << "|TInterface/ICONS/ability_vanish:15:15:-10::-8|t Velocidad al ser fantasma." << "\n";
+        text << "|TInterface/ICONS/ability_vanish:15:15:-10::-8|t Ghost speed boost." << "\n";
     if (petEnable) {
-        text << "|TInterface/ICONS/ability_hunter_beastcall:15:15:-10::-8|t Mascota VIP." << "\n";
+        text << "|TInterface/ICONS/ability_hunter_beastcall:15:15:-10::-8|t VIP pet." << "\n";
         if(vipZone)
-            text << "|TInterface/ICONS/Achievement_Zone_ZulDrak_12:15:15:-10::-8|t Zona Vip." << "\n";
+            text << "|TInterface/ICONS/Achievement_Zone_ZulDrak_12:15:15:-10::-8|t VIP zone." << "\n";
         if(armorRep)
-            text << "|TInterface/ICONS/INV_Hammer_20:15:15:-10::-8|t Reparar Armaduras." << "\n";
+            text << "|TInterface/ICONS/INV_Hammer_20:15:15:-10::-8|t Armor repair." << "\n";
         if(bankEnable)
-            text << "|TInterface/ICONS/INV_Ingot_03:15:15:-10::-8|t Banco personal." << "\n";
+            text << "|TInterface/ICONS/INV_Ingot_03:15:15:-10::-8|t Personal bank." << "\n";
         if(mailEnable)
-            text << "|TInterface/ICONS/inv_letter_15:15:15:-10::-8|t Abrir correo." << "\n";
+            text << "|TInterface/ICONS/inv_letter_15:15:15:-10::-8|t Open mailbox." << "\n";
         if(buffsEnable)
-            text << "|TInterface/ICONS/Spell_Magic_GreaterBlessingofKings:15:15:-10::-8|t Buffos VIP." << "\n";
+            text << "|TInterface/ICONS/Spell_Magic_GreaterBlessingofKings:15:15:-10::-8|t VIP buffs." << "\n";
         if(refreshEnable)
-            text << "|TInterface/ICONS/Spell_Holy_LayOnHands:15:15:-10::-8|t Restaurar hp/mana." << "\n";
+            text << "|TInterface/ICONS/Spell_Holy_LayOnHands:15:15:-10::-8|t Restore HP/mana." << "\n";
         if(sicknessEnbale)
-            text << "|TInterface/ICONS/spell_shadow_deathscream:15:15:-10::-8|t Eliminar dolencia." << "\n";
+            text << "|TInterface/ICONS/spell_shadow_deathscream:15:15:-10::-8|t Remove resurrection sickness." << "\n";
         if(deserterEnable)
-            text << "|TInterface/ICONS/ability_druid_cower:15:15:-10::-8|t Eliminar desertor." << "\n";
+            text << "|TInterface/ICONS/ability_druid_cower:15:15:-10::-8|t Remove deserter." << "\n";
         if(resetInstance)
-            text << "|TInterface/ICONS/Achievement_Dungeon_Icecrown_IcecrownEntrance:15:15:-10::-8|t Reiniciar instancias." << "\n";
+            text << "|TInterface/ICONS/Achievement_Dungeon_Icecrown_IcecrownEntrance:15:15:-10::-8|t Reset instances." << "\n";
         if(saveTeleport)
-            text << "|TInterface/ICONS/Spell_Holy_LightsGrace:15:15:-10::-8|t Guardar zonas para teleport." << "\n";
+            text << "|TInterface/ICONS/Spell_Holy_LightsGrace:15:15:-10::-8|t Save teleport locations." << "\n";
     }
     return text.str();
 }
@@ -159,19 +159,19 @@ void SystemVip::sendGossipInformation(Player* player, bool advantages) {
     std::ostringstream text;
     std::string accName;
     if (AccountMgr::GetName(player->GetSession()->GetAccountId(), accName))
-        text << "Usuario: |CFF0E3CE6" << accName << "|r\n";
+        text << "Account: |CFF0E3CE6" << accName << "|r\n";
 
     if (isVip(player)) {
-        text << "Tiempo restante: |CFF0DD617" << getFormatedVipTime(player) << "|r\n\n";
-        text << "Gracias por comprar una suscripcion vip.\n\n";
+        text << "Remaining time: |CFF0DD617" << getFormatedVipTime(player) << "|r\n\n";
+        text << "Thank you for purchasing a VIP subscription.\n\n";
     }
     else {
-        text << "No tienes una suscripción vip disponible.\n";
-        text << "Compra una suscripción y disfruta de todos los beneficios de ser vip!\n";
+        text << "You do not have an active VIP subscription.\n";
+        text << "Purchase a subscription and enjoy all the benefits of being VIP!\n";
     }
 
     if (advantages) {
-        text << "Recuerda que al comprar vip tienes beneficios en todos los personajes de tu cuenta." << "\n";
+        text << "Remember that VIP benefits apply to every character on your account." << "\n";
         text << getInformationAdavantages();
     }
 
@@ -236,13 +236,13 @@ void SystemVip::addTeleportVip(Player* player, string name) {
     uint32 id = 1;
     if (teleportMap.count(accountId) > 0) {
         if (teleportMap[accountId].size() == saveTeleportAmount) {
-            ChatHandler(player->GetSession()).PSendSysMessage("No puedes guardar mas Teleports!");
+            ChatHandler(player->GetSession()).PSendSysMessage("You cannot save any more teleports!");
             return;
         }
 
         for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
             if (teleportMap[accountId][i].name == teleport.name) {
-                ChatHandler(player->GetSession()).PSendSysMessage("Ya existe un teleport con el mismo nombre!");
+                ChatHandler(player->GetSession()).PSendSysMessage("A teleport with that name already exists!");
                 return;
             }
         }
@@ -251,7 +251,7 @@ void SystemVip::addTeleportVip(Player* player, string name) {
     teleport.id = id;
     teleportMap[accountId].push_back(teleport);
     LoginDatabase.Execute("INSERT INTO account_vip_teleport VALUES ( {} , '{}', {}, {}, {}, {}, {} );", accountId, name, teleport.mapId, teleport.coord_x, teleport.coord_y, teleport.coord_z, teleport.orientation);
-    ChatHandler(player->GetSession()).PSendSysMessage("Ubicación guardada con exito.");
+    ChatHandler(player->GetSession()).PSendSysMessage("Location saved successfully.");
 }
 
 void SystemVip::delTeleportVip(Player* player, string name) {
@@ -263,14 +263,14 @@ void SystemVip::delTeleportVip(Player* player, string name) {
             return;
         }
     }
-    ChatHandler(player->GetSession()).PSendSysMessage("Nombre incorrecto.");
+    ChatHandler(player->GetSession()).PSendSysMessage("Incorrect name.");
 }
 
 void SystemVip::getTeleports(Player* player) {
     uint32 accountId = player->GetSession()->GetAccountId();
     if( teleportMap.count(accountId) != 0){
         for (size_t i = 0; i < teleportMap[accountId].size(); i++) {
-            AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t "+teleportMap[accountId][i].name, teleportMap[accountId][i].id, 12, "Quieres teletransportarte?", 0, false);
+            AddGossipItemFor(player, 0, "|TInterface/CURSOR/Taxi:28:28:-15:0|t "+teleportMap[accountId][i].name, teleportMap[accountId][i].id, 12, "Do you want to teleport?", 0, false);
         }
     }
 }

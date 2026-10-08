@@ -50,7 +50,7 @@ public:
 
     bool petEnable;
     bool vipZone;
-    float vipZoneMapId;
+    uint32 vipZoneMapId;
     float vipZonePosX;
     float vipZonePosY;
     float vipZonePosZ;
